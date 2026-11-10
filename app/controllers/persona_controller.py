@@ -58,7 +58,7 @@ def cumpleanios_mes(numero_mes: int, db: Session = Depends(get_db)):
     if numero_mes < 1 or numero_mes > 12:
         raise HTTPException(
             status_code=400,
-            detail="El mes debe ser un entero entre 1 y 12.",
+            detail="numero_mes debe ser un entero entre 1 y 12.",
         )
     personas = db.query(Persona).filter(
         extract("month", Persona.birth_date) == numero_mes
