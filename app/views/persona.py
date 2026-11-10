@@ -42,11 +42,13 @@ class PersonaRead(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
-   # ---------------------------------------------------------------------------
-   # Laboratorio 1 - Esquemas para endpoints de analítica (estadísticas de edad)
-   # ---------------------------------------------------------------------------
-   class EstadisticasEdadRead(BaseModel):
-       """Respuesta de GET /personas/estadisticas/edad."""
-       edad_promedio: float | None
-       edad_minima: int | None
-       edad_maxima: int | None
+
+
+# ---------------------------------------------------------------------------
+# Laboratorio 1 - Esquemas para endpoints de analitica (estadisticas de edad)
+# ---------------------------------------------------------------------------
+class EstadisticasEdadRead(BaseModel):
+    """Respuesta de GET /personas/estadisticas/edad."""
+    edad_promedio: float | None
+    edad_minima: int | None
+    edad_maxima: int | None
