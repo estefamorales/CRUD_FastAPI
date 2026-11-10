@@ -30,6 +30,8 @@ def list_personas(
 @router.get("/buscar/{termino}")
 def buscar_personas(termino: str, db: Session = Depends(get_db)):
     termino = termino.strip()
+    if not termino:
+        return []
     personas = db.query(Persona).filter(
         or_(
             Persona.first_name.ilike(f"%{termino}%"),
