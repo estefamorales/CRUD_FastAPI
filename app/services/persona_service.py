@@ -135,3 +135,11 @@ def desactivar_masivo(db: Session, ids: list[int]) -> dict:
         "no_encontrados": no_encontrados,
         "total_desactivados": len(desactivados),
     }
+
+
+# ---------------------------------------------------------------------------
+# Laboratorio 1 - I. Exportar a CSV
+# ---------------------------------------------------------------------------
+def listar_todas(db: Session) -> Sequence[Persona]:
+    """Devuelve TODOS los registros ordenados por id (para exportar)."""
+    return db.query(Persona).order_by(Persona.id).all()

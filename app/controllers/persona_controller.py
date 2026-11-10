@@ -1,5 +1,8 @@
+import csv
+import io
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from ..database import get_db
@@ -40,6 +43,45 @@ def desactivar_masivo(body: BulkDesactivarRequest, db: Session = Depends(get_db)
     if len(body.ids) > 100:
         raise HTTPException(status_code=400, detail="La lista de ids no puede tener más de 100 elementos.")
     return persona_service.desactivar_masivo(db, body.ids)
+
+
+@router.get("/exportar/csv")
+def exportar_csv(db: Session = Depends(get_db)):
+    """I. Exporta todos los registros en formato CSV (descarga personas.csv)."""
+    personas = persona_service.listar_todas(db)  # se leen antes de empezar a "streamear"
+
+    def generar_csv():
+        buffer = io.StringIO()
+        writer = csv.writer(buffer)
+
+        def flush() -> str:
+            data = buffer.getvalue()
+            buffer.seek(0)
+            buffer.truncate(0)
+            return data
+
+        writer.writerow(
+            ["id", "first_name", "last_name", "email", "phone", "birth_date", "is_active", "notes"]
+        )
+        yield flush()
+        for p in personas:
+            writer.writerow([
+                p.id,
+                p.first_name,
+                p.last_name,
+                p.email,
+                p.phone or "",
+                p.birth_date.isoformat() if p.birth_date else "",
+                "true" if p.is_active else "false",
+                p.notes or "",
+            ])
+            yield flush()
+
+    return StreamingResponse(
+        generar_csv(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="personas.csv"'},
+    )
 
 
 @router.get("/{persona_id}", response_model=PersonaRead)
