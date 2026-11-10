@@ -58,7 +58,7 @@ def cumpleanios_mes(numero_mes: int, db: Session = Depends(get_db)):
         )
     personas = db.query(Persona).filter(
         extract("month", Persona.birth_date) == numero_mes
-    ).all()
+    ).order_by(Persona.birth_date).all()
     return personas
 
 @router.get("/{persona_id}", response_model=PersonaRead)
