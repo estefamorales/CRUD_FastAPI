@@ -138,3 +138,13 @@ curl -s -X DELETE http://127.0.0.1:8000/personas/1 -i
 - GET /personas/buscar/{termino} — búsqueda por nombre, apellido o email
 - GET /personas/reporte/activos — listado de usuarios activos con proyección reducida
 - GET /personas/cumpleanios/mes/{numero_mes} — personas que cumplen años en un mes dado
+
+### [ESTEFANYA MORALES CORREA]
+- POST /personas/poblar
+- DELETE /personas/reset
+- GET /personas/estadisticas/dominios
+
+### [MANUEL ARAUJO CARDENAS COLMENARES]
+- GET /personas/estadisticas/edad
+- PATCH /personas/bulk/desactivar
+- GET /personas/exportar/csv
