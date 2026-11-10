@@ -45,6 +45,8 @@ def buscar_personas(termino: str, db: Session = Depends(get_db)):
 @router.get("/reporte/activos")
 def reporte_activos(db: Session = Depends(get_db)):
     activos = db.query(Persona).filter(Persona.is_active == True).order_by(Persona.id).all()
+    if not activos:
+        return []
     return [
         {"id": p.id, "email": p.email, "phone": p.phone, "is_active": p.is_active}
         for p in activos
