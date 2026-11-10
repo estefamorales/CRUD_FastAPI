@@ -1,5 +1,5 @@
 from typing import Sequence
-from sqlalchemy import func, literal_column
+from sqlalchemy import func, literal_column, update
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -102,4 +102,36 @@ def estadisticas_edad(db: Session) -> dict:
         "edad_promedio": round(float(promedio), 1),
         "edad_minima": int(minima),
         "edad_maxima": int(maxima),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Laboratorio 1 - H. Desactivacion masiva
+# ---------------------------------------------------------------------------
+def desactivar_masivo(db: Session, ids: list[int]) -> dict:
+    """Pone is_active = false a los IDs que existan y reporta los que no.
+
+    Todo ocurre en una sola transaccion: un SELECT para saber cuales existen
+    y un unico UPDATE ... WHERE id IN (...).
+    """
+    # Quitar duplicados conservando el orden en que llegaron
+    ids_unicos = list(dict.fromkeys(ids))
+
+    existentes = {
+        fila[0] for fila in db.query(Persona.id).filter(Persona.id.in_(ids_unicos)).all()
+    }
+    desactivados = [i for i in ids_unicos if i in existentes]
+    no_encontrados = [i for i in ids_unicos if i not in existentes]
+
+    if desactivados:
+        db.execute(
+            update(Persona).where(Persona.id.in_(desactivados)).values(is_active=False)
+        )
+        db.commit()
+
+    return {
+        "message": "Operación completada.",
+        "desactivados": desactivados,
+        "no_encontrados": no_encontrados,
+        "total_desactivados": len(desactivados),
     }
