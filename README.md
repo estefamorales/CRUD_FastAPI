@@ -52,6 +52,7 @@ DATABASE_URL=mysql+pymysql://usuario:contraseña@localhost:3306/nombre_basedatos
 - `GET /personas/{id}` → obtener persona por ID
 - `PUT /personas/{id}` → actualizar (parcial) persona
 - `DELETE /personas/{id}` → eliminar persona
+- `GET /personas/estadisticas/edad` → edad promedio, mínima y máxima (desarrollado por Manuel)
 
 ### Esquemas (JSON)
 
