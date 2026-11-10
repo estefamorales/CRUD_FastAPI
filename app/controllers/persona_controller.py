@@ -1,9 +1,9 @@
 from typing import List
-from fastapi import APIRouter, Depends, Query, status
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..views.persona import PersonaCreate, PersonaUpdate, PersonaRead, EstadisticasEdadRead
+from ..views.persona import PersonaCreate, PersonaUpdate, PersonaRead, EstadisticasEdadRead, BulkDesactivarRequest, BulkDesactivarResponse
 from ..services import persona_service
 
 router = APIRouter(prefix="/personas", tags=["personas"])
@@ -30,6 +30,16 @@ def list_personas(
 def estadisticas_edad(db: Session = Depends(get_db)):
     """D. Edad promedio (1 decimal), mínima y máxima según birth_date."""
     return persona_service.estadisticas_edad(db)
+
+
+@router.patch("/bulk/desactivar", response_model=BulkDesactivarResponse)
+def desactivar_masivo(body: BulkDesactivarRequest, db: Session = Depends(get_db)):
+    """H. Desactiva una lista de IDs (1 a 100) y reporta los no encontrados."""
+    if len(body.ids) == 0:
+        raise HTTPException(status_code=400, detail="La lista de ids no puede estar vacía.")
+    if len(body.ids) > 100:
+        raise HTTPException(status_code=400, detail="La lista de ids no puede tener más de 100 elementos.")
+    return persona_service.desactivar_masivo(db, body.ids)
 
 
 @router.get("/{persona_id}", response_model=PersonaRead)
