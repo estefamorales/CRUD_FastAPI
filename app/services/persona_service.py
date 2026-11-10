@@ -1,4 +1,5 @@
 from typing import Sequence
+from sqlalchemy import func, literal_column
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -76,3 +77,29 @@ def delete_persona(db: Session, persona_id: int) -> None:
         raise PersonaNotFoundError()
     db.delete(obj)
     db.commit()
+    
+    
+    # ---------------------------------------------------------------------------
+# Laboratorio 1 - D. Estadísticas de edad
+# ---------------------------------------------------------------------------
+def estadisticas_edad(db: Session) -> dict:
+    """Edad promedio / mínima / máxima calculadas en SQL a partir de birth_date.
+
+    Equivale a (MySQL):
+        SELECT AVG(TIMESTAMPDIFF(YEAR, birth_date, CURDATE())),
+               MIN(TIMESTAMPDIFF(YEAR, birth_date, CURDATE())),
+               MAX(TIMESTAMPDIFF(YEAR, birth_date, CURDATE()))
+        FROM personas;
+    TIMESTAMPDIFF(YEAR, ...) devuelve años cumplidos (entero).
+    """
+    edad = func.timestampdiff(literal_column("YEAR"), Persona.birth_date, func.curdate())
+    promedio, minima, maxima = db.query(func.avg(edad), func.min(edad), func.max(edad)).one()
+
+    if promedio is None:  # tabla vacía o sin fechas de nacimiento
+        return {"edad_promedio": None, "edad_minima": None, "edad_maxima": None}
+
+    return {
+        "edad_promedio": round(float(promedio), 1),
+        "edad_minima": int(minima),
+        "edad_maxima": int(maxima),
+    }

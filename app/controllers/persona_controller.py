@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..views.persona import PersonaCreate, PersonaUpdate, PersonaRead
+from ..views.persona import PersonaCreate, PersonaUpdate, PersonaRead, EstadisticasEdadRead
 from ..services import persona_service
 
 router = APIRouter(prefix="/personas", tags=["personas"])
@@ -24,6 +24,12 @@ def list_personas(
 ):
     """List Personas with pagination via service layer."""
     return persona_service.list_personas(db, skip=skip, limit=limit)
+
+
+@router.get("/estadisticas/edad", response_model=EstadisticasEdadRead)
+def estadisticas_edad(db: Session = Depends(get_db)):
+    """D. Edad promedio (1 decimal), mínima y máxima según birth_date."""
+    return persona_service.estadisticas_edad(db)
 
 
 @router.get("/{persona_id}", response_model=PersonaRead)
