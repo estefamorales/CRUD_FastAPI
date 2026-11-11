@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 from ..database import get_db
 from ..views.persona import PersonaCreate, PersonaUpdate, PersonaRead, EstadisticasEdadRead, BulkDesactivarRequest, BulkDesactivarResponse
 from ..services import persona_service
+from ..models.persona import Persona
 
 router = APIRouter(prefix="/personas", tags=["personas"])
 
