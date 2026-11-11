@@ -42,3 +42,29 @@ class PersonaRead(BaseModel):
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+# ---------------------------------------------------------------------------
+# Laboratorio 1 - Esquemas para endpoints de analitica (estadisticas de edad)
+# ---------------------------------------------------------------------------
+class EstadisticasEdadRead(BaseModel):
+    """Respuesta de GET /personas/estadisticas/edad."""
+    edad_promedio: float | None
+    edad_minima: int | None
+    edad_maxima: int | None
+
+
+# ---------------------------------------------------------------------------
+# Laboratorio 1 - Esquemas para desactivacion masiva (PATCH bulk)
+# ---------------------------------------------------------------------------
+class BulkDesactivarRequest(BaseModel):
+    """Cuerpo de PATCH /personas/bulk/desactivar."""
+    ids: list[int]
+
+
+class BulkDesactivarResponse(BaseModel):
+    """Respuesta de PATCH /personas/bulk/desactivar."""
+    message: str
+    desactivados: list[int]
+    no_encontrados: list[int]
+    total_desactivados: int

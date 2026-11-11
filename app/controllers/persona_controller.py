@@ -1,10 +1,12 @@
+import csv
+import io
 from typing import List
-from fastapi import APIRouter, Depends, Query, status
-from sqlalchemy import or_, extract
+from fastapi import APIRouter, Depends, HTTPException, Query, status
+from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 
 from ..database import get_db
-from ..views.persona import PersonaCreate, PersonaUpdate, PersonaRead
+from ..views.persona import PersonaCreate, PersonaUpdate, PersonaRead, EstadisticasEdadRead, BulkDesactivarRequest, BulkDesactivarResponse
 from ..services import persona_service
 from ..models.persona import Persona
 
@@ -28,43 +30,60 @@ def list_personas(
     return persona_service.list_personas(db, skip=skip, limit=limit)
 
 
-@router.get("/buscar/{termino}")
-def buscar_personas(termino: str, db: Session = Depends(get_db)):
-    termino = termino.strip()
-    if not termino:
-        return []
-    personas = db.query(Persona).filter(
-        or_(
-            Persona.first_name.ilike(f"%{termino}%"),
-            Persona.last_name.ilike(f"%{termino}%"),
-            Persona.email.ilike(f"%{termino}%"),
+@router.get("/estadisticas/edad", response_model=EstadisticasEdadRead)
+def estadisticas_edad(db: Session = Depends(get_db)):
+    """D. Edad promedio (1 decimal), mínima y máxima según birth_date."""
+    return persona_service.estadisticas_edad(db)
+
+
+@router.patch("/bulk/desactivar", response_model=BulkDesactivarResponse)
+def desactivar_masivo(body: BulkDesactivarRequest, db: Session = Depends(get_db)):
+    """H. Desactiva una lista de IDs (1 a 100) y reporta los no encontrados."""
+    if len(body.ids) == 0:
+        raise HTTPException(status_code=400, detail="La lista de ids no puede estar vacía.")
+    if len(body.ids) > 100:
+        raise HTTPException(status_code=400, detail="La lista de ids no puede tener más de 100 elementos.")
+    return persona_service.desactivar_masivo(db, body.ids)
+
+
+@router.get("/exportar/csv")
+def exportar_csv(db: Session = Depends(get_db)):
+    """I. Exporta todos los registros en formato CSV (descarga personas.csv)."""
+    personas = persona_service.listar_todas(db)  # se leen antes de empezar a "streamear"
+
+    def generar_csv():
+        buffer = io.StringIO()
+        writer = csv.writer(buffer)
+
+        def flush() -> str:
+            data = buffer.getvalue()
+            buffer.seek(0)
+            buffer.truncate(0)
+            return data
+
+        writer.writerow(
+            ["id", "first_name", "last_name", "email", "phone", "birth_date", "is_active", "notes"]
         )
-    ).all()
-    return personas
+        yield flush()
+        for p in personas:
+            writer.writerow([
+                p.id,
+                p.first_name,
+                p.last_name,
+                p.email,
+                p.phone or "",
+                p.birth_date.isoformat() if p.birth_date else "",
+                "true" if p.is_active else "false",
+                p.notes or "",
+            ])
+            yield flush()
 
+    return StreamingResponse(
+        generar_csv(),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="personas.csv"'},
+    )
 
-@router.get("/reporte/activos")
-def reporte_activos(db: Session = Depends(get_db)):
-    activos = db.query(Persona).filter(Persona.is_active == True).order_by(Persona.id).all()
-    if not activos:
-        return []
-    return [
-        {"id": p.id, "email": p.email, "phone": p.phone, "is_active": p.is_active}
-        for p in activos
-    ]
-
-
-@router.get("/cumpleanios/mes/{numero_mes}")
-def cumpleanios_mes(numero_mes: int, db: Session = Depends(get_db)):
-    if numero_mes < 1 or numero_mes > 12:
-        raise HTTPException(
-            status_code=400,
-            detail="numero_mes debe ser un entero entre 1 y 12.       ",
-        )
-    personas = db.query(Persona).filter(
-        extract("month", Persona.birth_date) == numero_mes
-    ).order_by(Persona.birth_date).all()
-    return personas
 
 @router.get("/{persona_id}", response_model=PersonaRead)
 def get_persona(persona_id: int, db: Session = Depends(get_db)):

@@ -1,4 +1,5 @@
 from typing import Sequence
+from sqlalchemy import func, literal_column, update
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 
@@ -76,3 +77,69 @@ def delete_persona(db: Session, persona_id: int) -> None:
         raise PersonaNotFoundError()
     db.delete(obj)
     db.commit()
+    
+    
+    # ---------------------------------------------------------------------------
+# Laboratorio 1 - D. Estadísticas de edad
+# ---------------------------------------------------------------------------
+def estadisticas_edad(db: Session) -> dict:
+    """Edad promedio / mínima / máxima calculadas en SQL a partir de birth_date.
+
+    Equivale a (MySQL):
+        SELECT AVG(TIMESTAMPDIFF(YEAR, birth_date, CURDATE())),
+               MIN(TIMESTAMPDIFF(YEAR, birth_date, CURDATE())),
+               MAX(TIMESTAMPDIFF(YEAR, birth_date, CURDATE()))
+        FROM personas;
+    TIMESTAMPDIFF(YEAR, ...) devuelve años cumplidos (entero).
+    """
+    edad = func.timestampdiff(literal_column("YEAR"), Persona.birth_date, func.curdate())
+    promedio, minima, maxima = db.query(func.avg(edad), func.min(edad), func.max(edad)).one()
+
+    if promedio is None:  # tabla vacía o sin fechas de nacimiento
+        return {"edad_promedio": None, "edad_minima": None, "edad_maxima": None}
+
+    return {
+        "edad_promedio": round(float(promedio), 1),
+        "edad_minima": int(minima),
+        "edad_maxima": int(maxima),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Laboratorio 1 - H. Desactivacion masiva
+# ---------------------------------------------------------------------------
+def desactivar_masivo(db: Session, ids: list[int]) -> dict:
+    """Pone is_active = false a los IDs que existan y reporta los que no.
+
+    Todo ocurre en una sola transaccion: un SELECT para saber cuales existen
+    y un unico UPDATE ... WHERE id IN (...).
+    """
+    # Quitar duplicados conservando el orden en que llegaron
+    ids_unicos = list(dict.fromkeys(ids))
+
+    existentes = {
+        fila[0] for fila in db.query(Persona.id).filter(Persona.id.in_(ids_unicos)).all()
+    }
+    desactivados = [i for i in ids_unicos if i in existentes]
+    no_encontrados = [i for i in ids_unicos if i not in existentes]
+
+    if desactivados:
+        db.execute(
+            update(Persona).where(Persona.id.in_(desactivados)).values(is_active=False)
+        )
+        db.commit()
+
+    return {
+        "message": "Operación completada.",
+        "desactivados": desactivados,
+        "no_encontrados": no_encontrados,
+        "total_desactivados": len(desactivados),
+    }
+
+
+# ---------------------------------------------------------------------------
+# Laboratorio 1 - I. Exportar a CSV
+# ---------------------------------------------------------------------------
+def listar_todas(db: Session) -> Sequence[Persona]:
+    """Devuelve TODOS los registros ordenados por id (para exportar)."""
+    return db.query(Persona).order_by(Persona.id).all()
